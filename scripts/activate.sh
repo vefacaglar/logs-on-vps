@@ -27,7 +27,14 @@ if [[ ! -e "$base/.env" ]]; then
 fi
 ln -sfn "$base/.env" "$release/.env"
 
-if ! "$release/scripts/start.sh"; then
+activate_release() {
+  "$release/scripts/start.sh" || return 1
+  if [[ -f "$release/browser.env" ]]; then
+    python3 "$release/scripts/configure-caddy.py" "$release/browser-settings.json" "$base/caddy-backups" || return 1
+  fi
+}
+
+if ! activate_release; then
   echo 'Deployment failed.' >&2
   if [[ -n $previous && $previous != "$release" ]]; then
     echo 'Restoring previous release...' >&2

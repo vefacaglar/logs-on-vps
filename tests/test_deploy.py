@@ -30,10 +30,10 @@ class ActivationTests(unittest.TestCase):
         start.chmod(0o755)
         return release
 
-    def activate(self, deploy_id):
+    def activate(self, deploy_id, environment=None):
         return subprocess.run(
             ["bash", str(ROOT / "scripts/activate.sh"), str(self.base), deploy_id],
-            capture_output=True, text=True,
+            capture_output=True, text=True, env=environment,
         )
 
     def test_success_keeps_server_environment_and_switches_release(self):
@@ -71,6 +71,23 @@ class ActivationTests(unittest.TestCase):
         result = self.activate(NEXT_ID)
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("Rollback also failed", result.stderr)
+
+    def test_caddy_configuration_failure_restores_previous_release(self):
+        previous = self.release(DEPLOY_ID)
+        self.assertEqual(self.activate(DEPLOY_ID).returncode, 0)
+        newer = self.release(NEXT_ID)
+        (newer / 'browser.env').write_text('test hash only\n')
+        (newer / 'browser-settings.json').write_text('{}')
+        binaries = self.base / 'bin'
+        binaries.mkdir()
+        python = binaries / 'python3'
+        python.write_text('#!/bin/sh\nexit 1\n')
+        python.chmod(0o755)
+        environment = dict(os.environ, PATH=str(binaries) + os.pathsep + os.environ['PATH'])
+        result = self.activate(NEXT_ID, environment)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual((self.base / 'current').resolve(), previous)
+        self.assertEqual((self.base / 'attempts').read_text().splitlines(), [DEPLOY_ID, NEXT_ID, DEPLOY_ID])
 
 
 class TransportTests(unittest.TestCase):

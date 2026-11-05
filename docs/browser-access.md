@@ -1,6 +1,6 @@
 # Tarayıcıdan şifreli log erişimi
 
-Hedef adres `https://logs.vefacaglar.com`. Günlük kullanımda SSH bağlantısı veya tünel gerekmez. Bir defalık DNS ve mevcut Caddy route ayarı aşağıdadır.
+Hedef adres `https://logs.vefacaglar.com`. Kurulum ve günlük kullanım için VPS'e elle bağlanman gerekmez. GitHub secret'larını ve DNS kaydını sen ayarlarsın; workflow mevcut Caddy route'unu otomatik ekleyip doğrular ve yeniden yükler.
 
 Akış: tarayıcı → mevcut Caddy (HTTPS) → `browser` servisi (kullanıcı adı/şifre) → VictoriaLogs. Browser servisi yalnız `/select/*` sorgu ve arayüz yollarını geçirir; `/insert`, `/delete`, `/metrics`, `/debug` gibi yollar yayınlanmaz. VictoriaLogs'un `9428` portu host üzerinde yalnız loopback'te kalır; browser servisinin host portu yoktur.
 
@@ -19,13 +19,15 @@ Güncel dosyaları `main`e gönderip `Logs CI and deploy` workflow'unu çalışt
 
 ## Ortak Docker ağı
 
-Browser servisi mevcut Caddy ile `databases_default` ağını kullanır. VPS'te Caddy'nin ağını kontrol et:
+Browser servisi mevcut Caddy ile `databases_default` ağını kullanır. Workflow Caddy'nin bu ağ üzerinden browser servisine ulaşabildiğini doğrular. Farklı bir ağ/container/config yolu kullanıyorsan GitHub'da `Settings → Environments → logs-production → Environment variables` bölümündeki isteğe bağlı ayarları kullan; sunucudaki `.env` dosyasını elle düzenlemek gerekmez:
 
-```sh
-docker inspect caddy --format '{{json .NetworkSettings.Networks}}'
-```
+| Environment variable | Varsayılan / kullanım |
+| --- | --- |
+| `LOGS_PROXY_NETWORK` | Boşsa mevcut `.env` değeri veya `databases_default`. Caddy ile ortak, zaten mevcut Docker ağı. |
+| `LOGS_CADDY_CONTAINER` | `caddy`. Mevcut ana Caddy container'ının adı. |
+| `LOGS_CADDY_CONFIG_PATH` | Boş bırakılırsa container'ın `--config` argümanı veya `/etc/caddy/Caddyfile` otomatik bulunur. Gerekirse container içindeki mutlak yolu yaz. |
 
-Farklı bir ağ kullanıyorsan `/opt/logs-on-vps/.env` içindeki `LOGS_PROXY_NETWORK` değerini o ağın adıyla ayarla ve yeniden deploy et. Bu ağın mevcut olması gerekir. VictoriaLogs ve Vector kendi Compose ağlarında kalır; yalnız korumalı browser servisi ortak ağa eklenir.
+VictoriaLogs ve Vector kendi Compose ağlarında kalır; yalnız korumalı browser servisi ortak ağa eklenir.
 
 Browser ayarları release içinde tutulur. Deploy başarısızsa önceki release'e dönüş, önceki kullanıcı adı/şifre hash'ini de geri getirir. Ana `.env` ve log volume'ları korunur.
 
@@ -33,35 +35,13 @@ Browser ayarları release içinde tutulur. Deploy başarısızsa önceki release
 
 Cloudflare DNS'te `logs` adında A kaydı oluştur; önceki VPS adresin değişmediyse değer `187.126.24.87`. İlk kurulumda `DNS only` seç. HTTPS sertifikasını mevcut Caddy alır; sunucunun 80/443 portları mevcut Caddy'ye ulaşmalıdır.
 
-## Mevcut Caddy route'u
+## Otomatik Caddy kurulumu
 
-Bu adım bir defalıktır. Şifre ana Caddyfile'a yazılmaz; giriş denetimi browser servisinde yapılır. Mevcut auth/API/Typesense bloklarını koru. `logs.vefacaglar.com` zaten tanımlıysa aynı domain için ikinci blok ekleme.
+`main`e güncel kodu gönderip `Logs CI and deploy → Run workflow` çalıştırman yeterli. SSH kullanıcısı mevcut kalıcı Caddyfile'a yazabilmeli; VPS'te Python 3 bulunmalı. Workflow mevcut container'ın persistent mount'unu bulur, auth/API/Typesense bloklarını koruyarak yalnız [log domain route'unu](../deploy/Caddyfile.example) ekler. Aynı route zaten varsa çoğaltmaz; başka bir servise giden mevcut log domain'ini sessizce değiştirmez.
 
-VPS'te mevcut dosyanın yedeğini al:
+Değişiklikten önce `/opt/logs-on-vps/caddy-backups/` altında dosya modu `600` olan yedek alınır. Dosyanın inode'u korunarak yazılır; tek dosya bind mount'unda da değişiklik görünür. Caddy doğrulaması ve reload başarısızsa eski dosya geri yazılıp tekrar yüklenir. Başka bir deployment aynı anda Caddyfile'ı değiştirmişse onun değişikliğinin üzerine yazılmaz ve workflow hata bildirir.
 
-```sh
-cp /opt/databases/Caddyfile /opt/databases/Caddyfile.before-logs
-```
-
-[Örnek route](../deploy/Caddyfile.example) içindeki bloğu mevcut dosyanın sonuna bir kez ekle. Aşağıdaki append işlemi mevcut dosyanın inode'unu korur; tek dosya bind mount kullanan Caddy'de de değişiklik görünür:
-
-```sh
-cat >> /opt/databases/Caddyfile <<'CADDY'
-
-logs.vefacaglar.com {
-    reverse_proxy logs-on-vps-browser:8080
-}
-CADDY
-```
-
-Önce doğrula, başarılıysa yeniden yükle:
-
-```sh
-docker exec caddy caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile && \
-docker exec caddy caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile
-```
-
-Container veya Caddyfile yolun farklıysa bu komutları mevcut kurulumuna göre değiştir. Doğrulama başarısızsa yedeği `cat /opt/databases/Caddyfile.before-logs > /opt/databases/Caddyfile` ile geri yaz; hatalı ayarla reload yapma.
+Ana Caddy'de şifre tutulmaz; giriş denetimi browser servisindedir. Caddy `--watch` veya `--resume` ile çalışıyorsa ya da config kalıcı bir mount'ta değilse workflow bu dosyayı değiştirmez. Standart mevcut Caddyfile kurulumu desteklenir.
 
 ## Giriş ve şifre değişikliği
 

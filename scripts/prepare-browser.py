@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Create optional browser configuration without persisting the plaintext password."""
+import json
 import os
 from pathlib import Path
 import re
@@ -43,7 +44,17 @@ def prepare(destination, environment=None, hash_password=None):
     credentials.touch(mode=0o600)
     credentials.chmod(0o600)
     credentials.write_text(f"LOGS_UI_USERNAME={username}\nLOGS_UI_PASSWORD_HASH={password_hash}\n")
-    (destination / "compose.override.yml").write_bytes((ROOT / "deploy/compose.browser.yml").read_bytes())
+    override = (ROOT / "deploy/compose.browser.yml").read_text()
+    network = environment.get("LOGS_PROXY_NETWORK", "")
+    if network:
+        if not re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9_.-]*", network):
+            raise ValueError("Invalid LOGS_PROXY_NETWORK")
+        override = override.replace("${LOGS_PROXY_NETWORK:-databases_default}", network)
+    (destination / "compose.override.yml").write_text(override)
+    (destination / "browser-settings.json").write_text(json.dumps({
+        "container": environment.get("LOGS_CADDY_CONTAINER", "") or "caddy",
+        "config_path": environment.get("LOGS_CADDY_CONFIG_PATH", ""),
+    }))
     return True
 
 

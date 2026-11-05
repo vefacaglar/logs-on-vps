@@ -99,3 +99,56 @@ class BrowserIntegrationTests(unittest.TestCase):
         for path in ["/insert/jsonline", "/delete/0", "/metrics", "/flags", "/debug/pprof/", "/health"]:
             with self.subTest(path=path):
                 self.assertEqual(self.request(path, password=self.password)[0], 404)
+
+    def test_existing_caddy_is_configured_automatically_without_changing_other_sites(self):
+        name = 'logs-main-caddy-' + uuid.uuid4().hex[:12]
+        module = runpy.run_path(str(ROOT / 'scripts/configure-caddy.py'))
+        with tempfile.TemporaryDirectory(prefix='logs-main-caddy-') as directory:
+            path = Path(directory)
+            source = path / 'Caddyfile'
+            original = '{\n    local_certs\n    skip_install_trust\n}\n\nhttp://existing.example.test:8080 {\n    respond "existing survives"\n}\n'
+            source.write_text(original)
+            inode = source.stat().st_ino
+            settings = path / 'settings.json'
+            settings.write_text(json.dumps({'container': name, 'config_path': ''}))
+            image = runpy.run_path(str(ROOT / 'scripts/prepare-browser.py'))['CADDY_IMAGE']
+            try:
+                self.command(['docker', 'run', '-d', '--rm', '--name', name, '--network', self.network,
+                              '-p', '127.0.0.1::443', '-p', '127.0.0.1::8080', '--mount',
+                              f'type=bind,source={source},target=/etc/caddy/Caddyfile', image])
+                http_address = self.command(['docker', 'port', name, '8080']).strip()
+                https_port = self.command(['docker', 'port', name, '443']).strip().rsplit(':', 1)[1]
+                for _ in range(30):
+                    try:
+                        self.command(['curl', '--fail', '--silent', '--max-time', '2',
+                                      '-H', 'Host: existing.example.test', 'http://' + http_address])
+                        break
+                    except subprocess.CalledProcessError:
+                        time.sleep(1)
+                else:
+                    self.fail('Existing Caddy did not become ready')
+                module['main'](settings, path / 'backups')
+                module['main'](settings, path / 'backups')
+                self.assertTrue(source.read_text().startswith(original))
+                self.assertEqual(source.read_text().count(module['BEGIN']), 1)
+                self.assertEqual(source.stat().st_ino, inode)
+                self.assertEqual(self.command(['curl', '--fail', '--silent', '--max-time', '3',
+                                              '-H', 'Host: existing.example.test', 'http://' + http_address]), 'existing survives')
+                # This test uses Caddy's private CA, never a public TLS bypass.
+                request = ['curl', '--silent', '--show-error', '--insecure', '--max-time', '10',
+                           '--resolve', f'{module["DOMAIN"]}:{https_port}:127.0.0.1',
+                           '--output', '/dev/null', '--write-out', '%{http_code}']
+                url = f'https://{module["DOMAIN"]}:{https_port}/select/vmui/'
+                for _ in range(20):
+                    try:
+                        status = self.command(request + [url])
+                        if status == '401':
+                            break
+                    except subprocess.CalledProcessError:
+                        pass
+                    time.sleep(1)
+                else:
+                    self.fail('Managed HTTPS route did not require authentication')
+                self.assertEqual(self.command(request + ['--user', 'vefa:' + self.password, url]), '200')
+            finally:
+                subprocess.run(['docker', 'rm', '-f', name], capture_output=True)

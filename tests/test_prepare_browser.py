@@ -28,6 +28,14 @@ class BrowserBundleTests(unittest.TestCase):
         self.assertNotIn(password, credentials.read_text())
         self.assertEqual(credentials.stat().st_mode & 0o777, 0o600)
         self.assertIn("format: raw", (self.directory / "compose.override.yml").read_text())
+        self.assertEqual((self.directory / 'browser-settings.json').read_text(), '{"container": "caddy", "config_path": ""}')
+
+    def test_custom_proxy_network_can_be_configured_without_server_environment_edit(self):
+        prepare(self.directory, {'LOGS_UI_USERNAME': 'vefa', 'LOGS_UI_PASSWORD': 'private-test-password',
+                                 'LOGS_PROXY_NETWORK': 'existing_proxy', 'LOGS_CADDY_CONTAINER': 'main-caddy'},
+                lambda _: TEST_HASH)
+        self.assertIn('name: existing_proxy', (self.directory / 'compose.override.yml').read_text())
+        self.assertIn('main-caddy', (self.directory / 'browser-settings.json').read_text())
 
     def test_incomplete_credentials_and_config_injection_are_rejected(self):
         for environment in [

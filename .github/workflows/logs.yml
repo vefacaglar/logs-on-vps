@@ -61,4 +61,7 @@ jobs:
           DEPLOY_ID: ${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
           LOGS_UI_USERNAME: ${{ secrets.LOGS_UI_USERNAME }}
           LOGS_UI_PASSWORD: ${{ secrets.LOGS_UI_PASSWORD }}
+          LOGS_PROXY_NETWORK: ${{ vars.LOGS_PROXY_NETWORK }}
+          LOGS_CADDY_CONTAINER: ${{ vars.LOGS_CADDY_CONTAINER }}
+          LOGS_CADDY_CONFIG_PATH: ${{ vars.LOGS_CADDY_CONFIG_PATH }}
         run: bash scripts/ssh-deploy.sh

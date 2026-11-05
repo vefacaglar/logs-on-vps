@@ -6,3 +6,4 @@
 __pycache__/
 browser.env
 compose.override.yml
+browser-settings.json

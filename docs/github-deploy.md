@@ -90,9 +90,11 @@ Bu değişken **repository** seviyesinde olmalı; deploy job'unun başlaması En
 
 İsteğe bağlı olarak `Settings → Environments → logs-production → Environment variables` altında `VPS_DEPLOY_DIR` tanımlayabilirsin. Varsayılan `/opt/logs-on-vps`. Yol mutlak olmalı; harf, sayı, `_`, `-` ve `/` kullanabilir. SSH kullanıcısının bu dizini oluşturma/yazma yetkisi olmalı.
 
+Şifreli browser erişiminde mevcut Caddy varsayılanlarından farklı bir kurulum için aynı Environment variables bölümünde `LOGS_PROXY_NETWORK`, `LOGS_CADDY_CONTAINER` ve `LOGS_CADDY_CONFIG_PATH` kullanılabilir. [Browser rehberinde](browser-access.md) varsayılanlar açıklanır; standart kurulumda ek değişken gerekmez.
+
 ## VPS hazırlığı ve runtime ayarları
 
-VPS'te Docker Engine, Compose v2.30+, Bash, `tar`, `curl` ve `flock` gerekir. Mevcut Docker daemon'ı kullanılmalı; ayrıca Docker kurulumu yapma. GitHub runner'ının SSH portuna bağlanabilmesi gerekir. SSH kullanıcısı Docker komutlarını etkileşimsiz, `sudo` istemeden çalıştırabilmeli.
+VPS'te Docker Engine, Compose v2.30+, Bash, Python 3, `tar`, `curl` ve `flock` gerekir. Mevcut Docker daemon'ı kullanılmalı; ayrıca Docker kurulumu yapma. GitHub runner'ının SSH portuna bağlanabilmesi gerekir. SSH kullanıcısı Docker komutlarını etkileşimsiz, `sudo` istemeden çalıştırabilmeli.
 
 Sunucuda kontrol et:
 
@@ -128,9 +130,9 @@ Secret'ları ve Environment'ı hazırladıktan sonra repository variable `LOGS_D
 
 PR'larda yalnız kontrol ve geçici Docker log testi çalışır. `main` push'ları ve `main` üzerinde manuel çalıştırmalar, kontroller geçince `logs-production` üzerinden deploy eder. Başka dalda manuel çalıştırma deploy etmez. Varsa Environment onayını GitHub'da sen verirsin.
 
-Her deploy dosyaları `releases/<commit>-<run>-<attempt>/` altına yükler. Kalıcı `.env` ortak kalır. Sağlık ve gerçek Docker log testi geçince `current` symlink'i yeni release'e alınır. Docker volume adları sabittir; release dizini değiştiğinde log verisi korunur. Mevcut Caddy, DNS ve uygulama servisleri değiştirilmez. Bu akışı kullanırken aynı Compose projesine paralel olarak eski rsync dizininden deploy yapma.
+Her deploy dosyaları `releases/<commit>-<run>-<attempt>/` altına yükler. Kalıcı `.env` ortak kalır. Sağlık, gerçek Docker log testi ve etkinse Caddy kurulumu geçince `current` symlink'i yeni release'e alınır. Docker volume adları sabittir; release dizini değiştiğinde log verisi korunur. Browser erişimi etkinse mevcut Caddy'ye yalnız log domain route'u eklenir; diğer uygulama route'ları korunur. DNS kaydını sen ayarlarsın. Bu akışı kullanırken aynı Compose projesine paralel olarak eski rsync dizininden deploy yapma.
 
-Browser secret'ları varsa bundle'a yalnız hash içeren `browser.env` ve browser servisini ekleyen `compose.override.yml` de girer. Şifreli dış erişim için mevcut Caddy'deki bir defalık domain route'u ve DNS adımı [ayrı rehberdedir](browser-access.md).
+Browser secret'ları varsa bundle'a yalnız hash içeren `browser.env`, browser servisini ekleyen `compose.override.yml` ve Caddy hedefini belirleyen `browser-settings.json` da girer. Workflow Caddy route'unu otomatik ayarlar; VPS'e elle bağlanman gerekmez. GitHub/DNS ayarları [ayrı rehberdedir](browser-access.md).
 
 ## Hata ve geri dönüş
 

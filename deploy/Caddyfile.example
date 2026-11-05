@@ -1,4 +1,4 @@
-# Append to the existing VPS Caddyfile, preserving the other sites.
+# Reference only: the workflow manages this route in the existing Caddyfile.
 # Caddy must share LOGS_PROXY_NETWORK with the authenticated browser service.
 logs.vefacaglar.com {
     reverse_proxy logs-on-vps-browser:8080
