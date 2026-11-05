@@ -1,0 +1,10 @@
+.git
+**/node_modules
+**/.env
+**/.env.*
+browser/static
+browser.env
+browser-settings.json
+compose.override.yml
+**/__pycache__
+**/.DS_Store

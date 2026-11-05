@@ -97,7 +97,7 @@ class TransportTests(unittest.TestCase):
         self.base = Path(self.temp.name)
         self.repo = self.base / "repo"
         shutil.copytree(ROOT, self.repo, ignore=shutil.ignore_patterns(
-            ".git", "__pycache__", ".env", "browser.env", "compose.override.yml"))
+            ".git", "node_modules", "__pycache__", ".env", "browser.env", "compose.override.yml"))
         (self.repo / ".env").write_text("DO_NOT_UPLOAD=private\n")
         (self.repo / "unrelated-private.txt").write_text("private\n")
         self.bin = self.base / "bin"
@@ -133,9 +133,12 @@ if 'activate.sh' in args[-1]:
         with tarfile.open(self.base / "bundle.tar.gz") as bundle:
             names = bundle.getnames()
         self.assertIn(".env.example", names)
+        self.assertIn(".dockerignore", names)
         self.assertIn("scripts/activate.sh", names)
         self.assertIn("browser/Dockerfile", names)
-        self.assertIn("browser/static/app.js", names)
+        self.assertIn("client/src/main.tsx", names)
+        self.assertIn("client/package-lock.json", names)
+        self.assertFalse(any("node_modules" in name for name in names))
         self.assertNotIn(".env", names)
         self.assertNotIn("unrelated-private.txt", names)
         calls = [json.loads(line) for line in (self.base / "calls").read_text().splitlines()]

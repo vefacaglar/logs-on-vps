@@ -1,0 +1,225 @@
+.workspace {
+  display: grid;
+  grid-template-columns: 205px minmax(0, 1fr);
+  gap: 36px;
+}
+.sidebar {
+  border-right: 1px solid var(--border);
+  padding: 4px 24px 24px 0;
+  position: sticky;
+  top: 24px;
+  align-self: start;
+  max-height: calc(100dvh - 48px);
+  min-height: 70dvh;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+}
+.sidebarHeading {
+  font-size: 11px;
+  color: var(--muted);
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+.sidebarHeading span {
+  color: var(--accent);
+}
+.services {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.services button {
+  border: 0;
+  border-left: 2px solid transparent;
+  text-align: left;
+  background: none;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 11px;
+  padding: 9px 8px;
+}
+.services button span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.services button span:last-child {
+  font-size: 10px;
+  flex-shrink: 0;
+}
+.services button:hover {
+  background: var(--surface);
+}
+.services button.selected {
+  background: var(--surface);
+  border-left-color: var(--accent);
+  color: var(--text);
+}
+.note {
+  font-size: 10px;
+  color: var(--muted);
+  margin-top: 16px;
+}
+.tools {
+  margin-top: auto;
+  padding: 80px 8px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.console {
+  min-width: 0;
+}
+.search {
+  display: flex;
+  gap: 8px;
+}
+.search input {
+  flex: 1;
+  background: var(--surface);
+  padding: 12px;
+  font-size: 12px;
+}
+.search button {
+  font-size: 12px;
+  white-space: nowrap;
+}
+.filters {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-top: 16px;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.levels {
+  display: flex;
+  gap: 22px;
+}
+.levels button {
+  padding: 0 0 14px;
+  border: 0;
+  border-bottom: 1px solid transparent;
+  background: none;
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: -1px;
+}
+.levels button[aria-pressed="true"] {
+  color: var(--text);
+  border-color: var(--accent);
+}
+.time {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  padding-bottom: 12px;
+}
+.meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 20px 0;
+  color: var(--muted);
+  font-size: 10px;
+}
+.meta button {
+  font-size: 10px;
+}
+.load {
+  min-height: 90px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 11px;
+  color: var(--muted);
+}
+.period {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+  font-size: 10px;
+  color: var(--muted);
+  flex-wrap: wrap;
+}
+@media (max-width: 1100px) {
+  .workspace {
+    grid-template-columns: 170px minmax(0, 1fr);
+    gap: 24px;
+  }
+  .sidebar {
+    padding-right: 16px;
+  }
+  .time {
+    gap: 12px;
+  }
+}
+@media (max-width: 780px) {
+  .workspace {
+    display: block;
+  }
+  .sidebar {
+    position: static;
+    max-height: none;
+    min-height: 0;
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+    padding: 0 0 20px;
+    margin-bottom: 28px;
+  }
+  .sidebarHeading {
+    margin-bottom: 10px;
+  }
+  .services {
+    flex-direction: row;
+    overflow: auto;
+    padding-bottom: 6px;
+  }
+  .services button {
+    flex-shrink: 0;
+    border: 1px solid transparent;
+    max-width: 220px;
+  }
+  .services button.selected {
+    border-color: var(--border);
+  }
+  .tools {
+    padding: 16px 0 0;
+    margin: 0;
+    flex-direction: row;
+    font-size: 10px;
+  }
+  .tools p {
+    display: none;
+  }
+  .search input {
+    font-size: 16px;
+  }
+  .time {
+    width: 100%;
+    justify-content: space-between;
+    order: 0;
+  }
+  .levels {
+    order: 1;
+    width: 100%;
+    gap: 26px;
+  }
+  .meta {
+    font-size: 9px;
+  }
+  .meta button {
+    font-size: 9px;
+    flex-shrink: 0;
+  }
+}

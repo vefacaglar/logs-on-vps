@@ -69,7 +69,7 @@ func TestSessionLifecycleAndProtection(t *testing.T) {
 	if !c.Secure || !c.HttpOnly || c.SameSite != http.SameSiteStrictMode || c.Path != "/" || c.Name != "__Host-logs_session" || c.MaxAge != 43200 {
 		t.Fatalf("unsafe cookie: %+v", c)
 	}
-	if w := request(s, "GET", "/", "", c); w.Code != 200 || !strings.Contains(w.Body.String(), "Tüm loglar") {
+	if w := request(s, "GET", "/", "", c); w.Code != 200 || !strings.Contains(w.Body.String(), `id="root"`) {
 		t.Fatal("authenticated UI failed")
 	}
 	if w := request(s, "GET", "/api/session", "", c); w.Code != 200 {
@@ -126,8 +126,8 @@ func TestQueryPaginationFiltersAndProxyIsolation(t *testing.T) {
 		if r.Header.Get("Cookie") != "" || r.Header.Get("Authorization") != "" {
 			t.Error("credentials forwarded upstream")
 		}
-		if r.URL.Path == "/select/vmui/" {
-			w.Write([]byte("native UI"))
+		if r.URL.Path == "/select/logsql/field_names" {
+			w.Write([]byte(`{"values":[{"value":"_msg","hits":1}]}`))
 			return
 		}
 		if err := r.ParseForm(); err != nil {
@@ -195,13 +195,63 @@ func TestQueryPaginationFiltersAndProxyIsolation(t *testing.T) {
 	if request(s, "POST", "/api/services", fmt.Sprintf(body, 0), c).Code != 200 {
 		t.Fatal("service query failed")
 	}
-	r := httptest.NewRequest("GET", "http://logs.example.test/select/vmui/", nil)
+	r := httptest.NewRequest("GET", "http://logs.example.test/select/logsql/field_names", nil)
 	r.AddCookie(c)
 	r.Header.Set("Authorization", "Basic test")
 	w := httptest.NewRecorder()
 	s.ServeHTTP(w, r)
-	if w.Code != 200 || w.Body.String() != "native UI" {
-		t.Fatal("native UI proxy failed")
+	if w.Code != 200 || !strings.Contains(w.Body.String(), `"_msg"`) {
+		t.Fatal("read API proxy failed")
+	}
+}
+
+func TestCustomClientRoutesAndNativeUIAreIsolated(t *testing.T) {
+	s := testServer(t, "http://localhost:9428", false)
+	c := signIn(t, s)
+	for _, path := range []string{"/", "/explore", "/overview"} {
+		w := request(s, "GET", path, "", c)
+		if w.Code != 200 || !strings.Contains(w.Body.String(), `id="root"`) || strings.Contains(w.Body.String(), "__CSP_NONCE__") {
+			t.Fatalf("client route failed: %s %d", path, w.Code)
+		}
+		if !strings.Contains(w.Header().Get("Content-Security-Policy"), "style-src 'self' 'nonce-") || strings.Contains(w.Header().Get("Content-Security-Policy"), "script-src 'self' 'unsafe-inline'") {
+			t.Fatal("client CSP must nonce editor styles without allowing inline scripts")
+		}
+	}
+	for _, path := range []string{"/select/vmui/", "/select/vmui"} {
+		w := request(s, "GET", path, "", c)
+		if w.Code != 303 || w.Header().Get("Location") != "/explore" {
+			t.Fatal("legacy link must point to custom workspace")
+		}
+	}
+	for _, path := range []string{"/select/vmui/assets/index.js", "/select/vmui/manifest.json", "/select/not-an-api", "/static/advanced.js"} {
+		if w := request(s, "GET", path, "", c); w.Code != 404 {
+			t.Fatalf("native UI or unknown route exposed: %s", path)
+		}
+	}
+}
+
+func TestLiveStreamEndsAtSessionExpiry(t *testing.T) {
+	cancelled := make(chan struct{})
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/stream+json")
+		w.WriteHeader(200)
+		w.(http.Flusher).Flush()
+		<-r.Context().Done()
+		close(cancelled)
+	}))
+	defer upstream.Close()
+	s := testServer(t, upstream.URL, false)
+	cookie := signIn(t, s)
+	s.mu.Lock()
+	for key := range s.sessions {
+		s.sessions[key] = time.Now().Add(100 * time.Millisecond)
+	}
+	s.mu.Unlock()
+	request(s, "GET", "/select/logsql/tail", "", cookie)
+	select {
+	case <-cancelled:
+	case <-time.After(2 * time.Second):
+		t.Fatal("live upstream outlived the session")
 	}
 }
 

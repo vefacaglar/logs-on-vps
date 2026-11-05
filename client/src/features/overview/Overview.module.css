@@ -1,0 +1,126 @@
+.search {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+.search input {
+  flex: 1;
+  min-width: 180px;
+  background: var(--surface);
+}
+.search button,
+.search a {
+  font-size: 12px;
+}
+.search a {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  padding: 8px 12px;
+}
+.panels {
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr);
+  gap: 24px;
+  margin-top: 28px;
+}
+.panels > section {
+  min-width: 0;
+  border: 1px solid var(--border);
+  padding: 18px;
+}
+.heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 20px;
+  color: var(--muted);
+  font-size: 10px;
+}
+.heading h2 {
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.heading code {
+  color: var(--accent);
+}
+.panels input {
+  width: 100%;
+  font-size: 12px;
+}
+.list {
+  display: flex;
+  flex-direction: column;
+  margin-top: 16px;
+  max-height: 65dvh;
+  overflow: auto;
+}
+.list button {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  border: 0;
+  border-left: 2px solid transparent;
+  background: none;
+  text-align: left;
+  padding: 10px 8px;
+  font-size: 11px;
+}
+.list button[aria-pressed="true"] {
+  border-left-color: var(--accent);
+  background: var(--surface);
+}
+.list button span {
+  color: var(--muted);
+}
+.values {
+  max-height: 65dvh;
+  overflow: auto;
+  margin-top: 16px;
+}
+.values > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto 20px;
+  gap: 16px;
+  align-items: baseline;
+  border-bottom: 1px solid var(--border);
+  padding: 12px 0;
+  font-size: 11px;
+}
+.values code {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.values span {
+  color: var(--muted);
+}
+.values a {
+  color: var(--accent);
+}
+.status {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 14px;
+}
+@media (max-width: 1000px) {
+  .panels {
+    grid-template-columns: 240px minmax(0, 1fr);
+  }
+}
+@media (max-width: 780px) {
+  .panels {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .panels input {
+    font-size: 16px;
+  }
+  .list {
+    max-height: 280px;
+  }
+  .values > div {
+    gap: 12px;
+  }
+}

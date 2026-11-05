@@ -7,3 +7,6 @@ __pycache__/
 browser.env
 compose.override.yml
 browser-settings.json
+client/node_modules/
+browser/static/*
+!browser/static/README.txt

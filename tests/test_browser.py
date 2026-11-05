@@ -103,12 +103,12 @@ class BrowserIntegrationTests(unittest.TestCase):
     def test_authenticated_ui_and_post_query_work(self):
         status, _, content = self.request("/", authenticated=True)
         self.assertEqual(status, 200)
-        self.assertIn(b"/static/app.js", content)
-        status, _, advanced = self.request("/select/vmui/", authenticated=True)
+        self.assertIn(b'/assets/', content)
+        status, _, advanced = self.request("/explore", authenticated=True)
         self.assertEqual(status, 200)
-        self.assertIn(b'id="logs-advanced-shell"', advanced)
-        self.assertIn(b'/static/advanced.css', advanced)
-        self.assertIn(b'/static/advanced.js', advanced)
+        self.assertIn(b'id="root"', advanced)
+        self.assertIn(b'/assets/', advanced)
+        self.assertEqual(self.request('/select/vmui/assets/index.js', authenticated=True)[0], 404)
         data = urllib.parse.urlencode({"query": "_time:1m", "limit": "1"}).encode()
         self.assertEqual(self.request("/select/logsql/query", authenticated=True, data=data)[0], 200)
         end = time.time()
@@ -162,7 +162,7 @@ class BrowserIntegrationTests(unittest.TestCase):
                 request = ['curl', '--silent', '--show-error', '--insecure', '--max-time', '10',
                            '--resolve', f'{module["DOMAIN"]}:{https_port}:127.0.0.1',
                            '--output', '/dev/null', '--write-out', '%{http_code}']
-                url = f'https://{module["DOMAIN"]}:{https_port}/select/vmui/'
+                url = f'https://{module["DOMAIN"]}:{https_port}/explore'
                 for _ in range(20):
                     try:
                         status = self.command(request + [url])

@@ -1,0 +1,270 @@
+@font-face {
+  font-family: "Fira Code";
+  src: url("/fonts/FiraCode.ttf") format("truetype");
+  font-weight: 300 700;
+  font-display: swap;
+}
+:root {
+  --bg: #000;
+  --surface: #0b0b0b;
+  --surface-2: #161616;
+  --text: #eaeaea;
+  --heading: #fff;
+  --muted: #8e8e8e;
+  --border: #2d2d2d;
+  --accent: #a89276;
+  --success: #728477;
+  --warning: #9f8e7d;
+  --info: #7087a3;
+  --error: #c28b82;
+  --overlay: rgb(0 0 0 / 0.75);
+  --font: "Fira Code", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color-scheme: dark;
+}
+:root[data-theme="light"] {
+  --bg: #fff;
+  --surface: #faf9f7;
+  --surface-2: #f0eeeb;
+  --text: #2c2c2c;
+  --heading: #111;
+  --muted: #68645f;
+  --border: #dcd8d2;
+  --accent: #796247;
+  --success: #496753;
+  --warning: #806037;
+  --info: #49657f;
+  --error: #a43f35;
+  --overlay: rgb(35 30 25 / 0.3);
+  color-scheme: light;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 400 13px/1.65 var(--font);
+  letter-spacing: -0.03em;
+  -webkit-font-smoothing: antialiased;
+}
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  border-radius: 0;
+  color: inherit;
+}
+button {
+  cursor: pointer;
+}
+button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+a {
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+a:hover {
+  color: var(--accent);
+}
+button,
+input,
+select,
+textarea {
+  border: 1px solid var(--border);
+  background: var(--bg);
+  padding: 8px 12px;
+}
+input,
+select,
+textarea {
+  min-width: 0;
+}
+input:focus,
+select:focus,
+textarea:focus {
+  outline: 1px solid var(--accent);
+  outline-offset: -1px;
+}
+button:focus-visible,
+a:focus-visible,
+summary:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: 3px;
+}
+button:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: var(--accent);
+  margin: 0;
+  cursor: pointer;
+}
+h1,
+h2,
+h3,
+p,
+pre {
+  margin: 0;
+}
+h1 {
+  color: var(--heading);
+  font-size: 25px;
+  font-weight: 500;
+  letter-spacing: -0.06em;
+  line-height: 1.4;
+}
+h2 {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--heading);
+}
+h3 {
+  font-size: 13px;
+  font-weight: 500;
+}
+pre,
+code {
+  font-family: var(--font);
+}
+fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+label {
+  cursor: pointer;
+}
+::selection {
+  background: var(--border);
+}
+html {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) var(--bg);
+}
+[hidden] {
+  display: none !important;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.primary {
+  background: var(--heading);
+  border-color: var(--heading);
+  color: var(--bg);
+  font-weight: 500;
+}
+.primary:hover:not(:disabled) {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--bg);
+}
+.ghost:hover:not(:disabled) {
+  background: var(--surface-2);
+}
+.text-button {
+  border: 0;
+  padding: 0;
+  background: none;
+  color: var(--muted);
+  font-size: 11px;
+}
+.text-button:hover:not(:disabled) {
+  color: var(--accent);
+}
+.muted {
+  color: var(--muted);
+}
+.accent {
+  color: var(--accent);
+}
+.eyebrow {
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+.error {
+  border-left: 2px solid var(--error);
+  color: var(--error);
+  padding: 10px 14px;
+  margin: 16px 0;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.error pre {
+  font-size: 11px;
+  white-space: pre-wrap;
+  margin-top: 8px;
+  max-height: 240px;
+  overflow: auto;
+}
+.empty {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--muted);
+}
+.empty h2 {
+  margin-bottom: 12px;
+}
+.empty p {
+  font-size: 12px;
+}
+.empty button {
+  margin-top: 22px;
+}
+.checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.badge-error,
+.badge-fatal,
+.badge-panic {
+  color: var(--error);
+}
+.badge-warn {
+  color: var(--warning);
+}
+.badge-info {
+  color: var(--info);
+}
+.badge-debug,
+.badge-trace {
+  color: var(--muted);
+}
+@media (max-width: 780px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+  h1 {
+    font-size: 22px;
+  }
+  body {
+    font-size: 12px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

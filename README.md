@@ -27,7 +27,7 @@ Script sabit sürümlü image'ları çeker, Vector ayarlarını ve JSON dönüş
 
 Sunucuya bağlanmadan `https://logs.vefacaglar.com` üzerinden kullanıcı adı ve şifreyle erişim için [GitHub secrets ve HTTPS kurulumunu](docs/browser-access.md) uygula.
 
-Domain özel log konsolunu açar: vefacaglar.com ile aynı siyah/monospace tasarım, sayfa içi giriş, servis/seviye/zaman filtreleri ve aşağı kaydırarak eski kayıtları yükleme. Gelişmiş LogsQL sorguları için konsoldaki `gelişmiş sorgu` bağlantısı VictoriaLogs arayüzünü açar. Mevcut kullanıcı adı ve şifre secret'ları geçerlidir; yeni servis ilk güncellemede VPS'te derlenir.
+Domain tamamen bize ait React + TypeScript client'ı açar: Türkçe/İngilizce, açık/koyu tema, sayfa içi giriş, servis/seviye/zaman filtreleri ve geçmiş kayıtlar. `Gelişmiş sorgu` aynı sekmede kendi LogsQL çalışma alanımızı açar; CodeMirror, grafik, gruplama, tablo/JSON, canlı akış ve export içerir. `Alanları incele` log alanları ve değerlerini gösterir. VictoriaLogs yalnız sorgu/depolama API'sidir; native arayüzü domain üzerinden yayınlanmaz. Mevcut kullanıcı adı/şifre secret'ları geçerlidir; Docker client ve Go binary'sini otomatik derler.
 
 Mac'te ayrı terminalde tüneli açık tut:
 
@@ -35,7 +35,7 @@ Mac'te ayrı terminalde tüneli açık tut:
 ssh -N -L 9428:127.0.0.1:9428 VPS_SSH
 ```
 
-[VictoriaLogs arayüzünü aç](http://localhost:9428/select/vmui/). `LOG_HTTP_PORT` değişirse tünelin sağ tarafındaki portu da değiştir. VictoriaLogs yalnızca VPS'in `127.0.0.1` adresine yayınlanır. Tünel, domain erişiminin alternatifidir.
+Tünel yalnız yerel yönetim/API erişimi içindir. `curl http://localhost:9428/select/logsql/query -d 'query=_time:1h' -d 'limit=10'` ile doğrudan sorgu çalıştırılabilir. `LOG_HTTP_PORT` değişirse tünelin sağ tarafındaki portu da değiştir. Günlük arayüz için domain üzerindeki React client'ı kullan.
 
 ## Uygulamalar
 

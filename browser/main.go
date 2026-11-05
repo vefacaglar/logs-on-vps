@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/subtle"
@@ -60,12 +61,7 @@ func newServer(username, hash, upstream string, insecure bool) (*server, error) 
 		director(r)
 		r.Header.Del("Authorization")
 		r.Header.Del("Cookie")
-		if strings.HasPrefix(r.URL.Path, "/select/vmui") && (strings.Contains(r.Header.Get("Accept"), "text/html") || strings.HasSuffix(r.URL.Path, "/")) {
-			// Keep HTML editable; JS/CSS assets and query streams retain compression.
-			r.Header.Set("Accept-Encoding", "identity")
-		}
 	}
-	s.proxy.ModifyResponse = styleVMUI
 	s.proxy.ErrorHandler = func(w http.ResponseWriter, _ *http.Request, _ error) { fail(w, 502, "Log servisine ulaşılamıyor.") }
 	return s, nil
 }
@@ -337,18 +333,20 @@ func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.Header().Set("Referrer-Policy", "no-referrer")
 	w.Header().Set("X-Frame-Options", "DENY")
-	// VMUI has its own asset requirements; our pages need only same-origin assets.
-	if !strings.HasPrefix(r.URL.Path, "/select/") {
-		w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'")
-	}
+	w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'")
 	path := r.URL.Path
-	if r.Method == "GET" && strings.HasPrefix(path, "/static/") {
-		if strings.Contains(path, "..") {
+	if r.Method == "GET" && (strings.HasPrefix(path, "/assets/") || strings.HasPrefix(path, "/fonts/") || path == "/favicon.svg" || path == "/preferences.js") {
+		if strings.Contains(path, "..") || strings.HasSuffix(path, "/") {
 			http.NotFound(w, r)
 			return
 		}
 		sub, _ := fs.Sub(assets, "static")
-		http.StripPrefix("/static/", http.FileServer(http.FS(sub))).ServeHTTP(w, r)
+		http.FileServer(http.FS(sub)).ServeHTTP(w, r)
+		return
+	}
+	// Old bookmarks reach our workspace. Native VictoriaLogs UI/assets are never served.
+	if path == "/select/vmui" || path == "/select/vmui/" || path == "/select/vmui/index.html" {
+		http.Redirect(w, r, "/explore", http.StatusSeeOther)
 		return
 	}
 	if path == "/api/login" && r.Method == "POST" {
@@ -360,24 +358,29 @@ func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			http.Redirect(w, r, "/", http.StatusSeeOther)
 			return
 		}
-		servePage(w, "login.html")
+		servePage(w, "index.html")
 		return
 	}
-	known := path == "/" || path == "/api/session" || path == "/api/logout" || path == "/api/logs" || path == "/api/services" || strings.HasPrefix(path, "/select/")
+	page := path == "/" || path == "/explore" || path == "/overview"
+	known := page || path == "/api/session" || path == "/api/logout" || path == "/api/logs" || path == "/api/services" || readAPI[path]
 	if !known {
 		http.NotFound(w, r)
 		return
 	}
 	if !s.authenticated(r) {
-		if r.Method == "GET" && (path == "/" || strings.HasPrefix(path, "/select/vmui")) {
-			http.Redirect(w, r, "/login", http.StatusSeeOther)
+		if r.Method == "GET" && page {
+			destination := "/login"
+			if path != "/" {
+				destination += "?next=" + url.QueryEscape(r.URL.RequestURI())
+			}
+			http.Redirect(w, r, destination, http.StatusSeeOther)
 		} else {
 			fail(w, 401, "Oturum sona erdi. Tekrar giriş yap.")
 		}
 		return
 	}
 	switch {
-	case path == "/" && r.Method == "GET":
+	case page && r.Method == "GET":
 		servePage(w, "index.html")
 	case path == "/api/session" && r.Method == "GET":
 		respond(w, 200, map[string]string{"username": s.username})
@@ -396,7 +399,18 @@ func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		s.logs(w, r, false)
 	case path == "/api/services" && r.Method == "POST":
 		s.logs(w, r, true)
-	case strings.HasPrefix(path, "/select/") && (r.Method == "GET" || r.Method == "POST"):
+	case readAPI[path] && (r.Method == "GET" || r.Method == "POST"):
+		if path == "/select/logsql/tail" {
+			// Streams flush immediately and may stay open beyond normal page timeouts.
+			_ = http.NewResponseController(w).SetWriteDeadline(time.Time{})
+			cookie, _ := r.Cookie(s.cookieName())
+			s.mu.Lock()
+			expires := s.sessions[sha256.Sum256([]byte(cookie.Value))]
+			s.mu.Unlock()
+			ctx, cancel := context.WithDeadline(r.Context(), expires)
+			defer cancel()
+			r = r.WithContext(ctx)
+		}
 		s.proxy.ServeHTTP(w, r)
 	default:
 		fail(w, 405, "Bu yöntem desteklenmiyor.")
@@ -404,9 +418,29 @@ func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func servePage(w http.ResponseWriter, name string) {
-	data, _ := assets.ReadFile("static/" + name)
+	data, err := assets.ReadFile("static/" + name)
+	if err != nil {
+		fail(w, 503, "Client is not built. Run npm ci && npm run build in client/.")
+		return
+	}
+	var nonceBytes [16]byte
+	if _, err := rand.Read(nonceBytes[:]); err != nil {
+		fail(w, 500, "Client could not be loaded.")
+		return
+	}
+	nonce := hex.EncodeToString(nonceBytes[:])
+	data = []byte(strings.ReplaceAll(string(data), "__CSP_NONCE__", nonce))
+	w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self' 'nonce-"+nonce+"'; style-src-attr 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'")
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	_, _ = w.Write(data)
+}
+
+var readAPI = map[string]bool{
+	"/select/logsql/query": true, "/select/logsql/tail": true, "/select/logsql/hits": true,
+	"/select/logsql/field_names": true, "/select/logsql/field_values": true,
+	"/select/logsql/facets": true, "/select/logsql/streams": true, "/select/logsql/stream_ids": true,
+	"/select/logsql/stream_field_names": true, "/select/logsql/stream_field_values": true,
+	"/select/logsql/stats_query": true, "/select/logsql/stats_query_range": true,
 }
 
 func main() {

@@ -1,0 +1,104 @@
+.chart {
+  border: 1px solid var(--border);
+  padding: 18px 18px 12px;
+  min-width: 0;
+}
+.heading {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+  font-size: 10px;
+  color: var(--muted);
+}
+.heading h2 {
+  font-size: 12px;
+  margin-right: auto;
+}
+.chart svg {
+  width: 100%;
+  display: block;
+  touch-action: pan-y;
+  user-select: none;
+  cursor: crosshair;
+}
+.chart text {
+  font: 10px var(--font);
+  fill: var(--muted);
+}
+.grid {
+  stroke: var(--border);
+  stroke-width: 1;
+  stroke-dasharray: 2 5;
+}
+.series0 {
+  fill: var(--accent);
+  background: var(--accent);
+}
+.series1 {
+  fill: var(--info);
+  background: var(--info);
+}
+.series2 {
+  fill: var(--success);
+  background: var(--success);
+}
+.series3 {
+  fill: var(--error);
+  background: var(--error);
+}
+.series4 {
+  fill: var(--warning);
+  background: var(--warning);
+}
+.selection {
+  fill: var(--accent);
+  opacity: 0.22;
+  pointer-events: none;
+}
+.legend {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+  font-size: 10px;
+  color: var(--muted);
+  padding-top: 8px;
+}
+.legend span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.legend i {
+  width: 8px;
+  height: 8px;
+  display: inline-block;
+}
+.legend small {
+  font-size: 9px;
+  margin-left: auto;
+}
+.error {
+  padding: 40px 0;
+  text-align: center;
+  color: var(--muted);
+  font-size: 12px;
+}
+@media (max-width: 780px) {
+  .chart {
+    padding: 14px 8px;
+  }
+  .heading {
+    gap: 12px;
+    padding: 0 6px;
+  }
+  .chart svg {
+    min-height: 140px;
+  }
+  .legend small {
+    width: 100%;
+    margin-left: 6px;
+  }
+}

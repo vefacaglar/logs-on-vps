@@ -1,8 +1,16 @@
+FROM node:24-alpine@sha256:8a32c8cf649a49915a66e81e7a609223c708d0adabf288ee3f4077d765542f85 AS client
+WORKDIR /app/client
+COPY client/package.json client/package-lock.json ./
+RUN npm ci --no-fund --no-audit
+COPY client/ ./
+RUN npm run build
+
 FROM golang:1.26.3-alpine@sha256:91eda9776261207ea25fd06b5b7fed8d397dd2c0a283e77f2ab6e91bfa71079d AS build
 WORKDIR /src
-COPY go.mod go.sum ./
+COPY browser/go.mod browser/go.sum ./
 RUN go mod download
-COPY . .
+COPY browser/ .
+COPY --from=client /app/browser/static ./static
 RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /logs-browser .
 
 FROM alpine:3.23@sha256:8169a308ae899f69285e7214b3c2de1c1f0f091ab228b87a58040c49d8cc2b0d

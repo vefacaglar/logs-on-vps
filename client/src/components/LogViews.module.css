@@ -1,0 +1,247 @@
+.columns,
+.entry > summary {
+  display: grid;
+  grid-template-columns: 100px 64px 132px minmax(0, 1fr);
+  column-gap: 14px;
+}
+.columns {
+  font-size: 10px;
+  color: var(--muted);
+  padding: 12px 10px;
+  border-bottom: 1px solid var(--border);
+}
+.entry {
+  border-bottom: 1px solid var(--surface-2);
+  scroll-margin-top: 12px;
+}
+.entry > summary {
+  position: relative;
+  list-style: none;
+  cursor: pointer;
+  padding: 12px 10px;
+  align-items: baseline;
+  font-size: 12px;
+  min-height: 44px;
+}
+.entry > summary::-webkit-details-marker {
+  display: none;
+}
+.entry > summary:hover,
+.entry[open] > summary {
+  background: var(--surface);
+}
+.entry[open] > summary::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 12px;
+  bottom: 12px;
+  width: 2px;
+  background: var(--accent);
+}
+.time {
+  color: var(--muted);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+.time > span {
+  display: block;
+  font-size: 9px;
+}
+.level {
+  font-size: 10px;
+}
+.service {
+  color: var(--accent);
+  font-size: 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.message {
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  min-width: 0;
+}
+.wrap .message {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.details {
+  padding: 20px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+}
+.tools {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+.fullMessage {
+  font: 11px/1.8 var(--font);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin-bottom: 24px;
+}
+.fields {
+  margin: 0;
+}
+.fields > div {
+  display: grid;
+  grid-template-columns: 170px minmax(0, 1fr) auto;
+  gap: 24px;
+  margin-top: 10px;
+  font-size: 11px;
+}
+.fields dt {
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.fields dd {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.fieldActions {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+.fieldActions button {
+  font-size: 16px;
+}
+.viewTools {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 15px 0;
+  font-size: 10px;
+}
+.groupTitle {
+  padding: 18px 10px;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+.groupTitle code {
+  color: var(--accent);
+}
+.groupTitle span {
+  float: right;
+  color: var(--muted);
+}
+.tableScroll {
+  overflow: auto;
+  max-width: 100%;
+  border: 1px solid var(--border);
+}
+.tableScroll table {
+  border-collapse: collapse;
+  width: 100%;
+  text-align: left;
+  font-size: 11px;
+}
+.tableScroll th {
+  background: var(--surface);
+  color: var(--muted);
+  font-weight: 400;
+  position: sticky;
+  top: 0;
+}
+.tableScroll td,
+.tableScroll th {
+  border-bottom: 1px solid var(--border);
+  padding: 11px 14px;
+  max-width: 480px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: top;
+}
+.tableScroll tr:hover td {
+  background: var(--surface);
+}
+.tableScroll .tableWrap td {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  min-width: 160px;
+}
+.cell {
+  padding: 0;
+  border: 0;
+  text-align: left;
+  white-space: inherit;
+  overflow-wrap: inherit;
+  font-size: inherit;
+  background: none;
+  max-width: 100%;
+  color: inherit;
+}
+.json {
+  padding: 18px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  overflow: auto;
+  font-size: 11px;
+  line-height: 1.8;
+  max-height: 75dvh;
+}
+.jsonWrap {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 1100px) {
+  .columns,
+  .entry > summary {
+    grid-template-columns: 82px 54px 100px minmax(0, 1fr);
+    column-gap: 10px;
+  }
+}
+@media (max-width: 780px) {
+  .columns,
+  .entry > summary {
+    grid-template-columns: 78px 48px minmax(0, 1fr);
+  }
+  .columns > span:nth-child(3) {
+    display: none;
+  }
+  .columns > span:last-child {
+    grid-column: 3;
+  }
+  .entry > summary {
+    row-gap: 6px;
+    padding: 12px 4px;
+  }
+  .time > span {
+    display: none;
+  }
+  .service {
+    grid-row: 1;
+    grid-column: 3;
+  }
+  .message {
+    grid-row: 2;
+    grid-column: 1/-1;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+  }
+  .wrap .message {
+    display: block;
+  }
+  .fields > div {
+    grid-template-columns: 90px minmax(0, 1fr);
+    gap: 12px;
+  }
+  .fieldActions {
+    grid-column: 2;
+  }
+  .details {
+    padding: 16px 12px;
+  }
+}

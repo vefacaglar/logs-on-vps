@@ -40,4 +40,4 @@ if docker compose config --services | grep -qx browser; then
 fi
 
 ./scripts/smoke-test.sh
-printf '\nReady: http://%s/select/vmui/\n' "$address"
+printf '\nReady: VictoriaLogs API http://%s/select/logsql/query\n' "$address"
