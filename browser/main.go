@@ -60,7 +60,12 @@ func newServer(username, hash, upstream string, insecure bool) (*server, error) 
 		director(r)
 		r.Header.Del("Authorization")
 		r.Header.Del("Cookie")
+		if strings.HasPrefix(r.URL.Path, "/select/vmui") && (strings.Contains(r.Header.Get("Accept"), "text/html") || strings.HasSuffix(r.URL.Path, "/")) {
+			// Keep HTML editable; JS/CSS assets and query streams retain compression.
+			r.Header.Set("Accept-Encoding", "identity")
+		}
 	}
+	s.proxy.ModifyResponse = styleVMUI
 	s.proxy.ErrorHandler = func(w http.ResponseWriter, _ *http.Request, _ error) { fail(w, 502, "Log servisine ulaşılamıyor.") }
 	return s, nil
 }

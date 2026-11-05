@@ -69,7 +69,7 @@ func TestSessionLifecycleAndProtection(t *testing.T) {
 	if !c.Secure || !c.HttpOnly || c.SameSite != http.SameSiteStrictMode || c.Path != "/" || c.Name != "__Host-logs_session" || c.MaxAge != 43200 {
 		t.Fatalf("unsafe cookie: %+v", c)
 	}
-	if w := request(s, "GET", "/", "", c); w.Code != 200 || !strings.Contains(w.Body.String(), "tüm loglar") {
+	if w := request(s, "GET", "/", "", c); w.Code != 200 || !strings.Contains(w.Body.String(), "Tüm loglar") {
 		t.Fatal("authenticated UI failed")
 	}
 	if w := request(s, "GET", "/api/session", "", c); w.Code != 200 {

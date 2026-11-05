@@ -4,7 +4,7 @@ const toggle = document.querySelector("#show-password");
 toggle.addEventListener("click", () => {
   const show = password.type === "password";
   password.type = show ? "text" : "password";
-  toggle.textContent = show ? "gizle" : "göster";
+  toggle.textContent = show ? "Gizle" : "Göster";
   toggle.setAttribute("aria-pressed", String(show));
 });
 form.addEventListener("submit", async (event) => {
@@ -12,7 +12,7 @@ form.addEventListener("submit", async (event) => {
   const submit = form.querySelector("[type=submit]");
   const error = document.querySelector("#login-error");
   submit.disabled = true;
-  submit.textContent = "giriş yapılıyor…";
+  submit.textContent = "Giriş yapılıyor…";
   error.hidden = true;
   try {
     const response = await fetch("/api/login", {
@@ -39,6 +39,6 @@ form.addEventListener("submit", async (event) => {
     password.focus();
   } finally {
     submit.disabled = false;
-    submit.textContent = "giriş yap ↗";
+    submit.textContent = "Giriş yap ↗";
   }
 });

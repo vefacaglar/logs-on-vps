@@ -99,10 +99,10 @@ function updateControls() {
     button.setAttribute("aria-pressed", String(selected));
   });
   $("#page-title").replaceChildren(
-    document.createTextNode(state.service || "tüm loglar"),
+    document.createTextNode(state.service || "Tüm loglar"),
     node("span", "accent", "."),
   );
-  document.title = `${state.service || "logs"} · vefa çağlar`;
+  document.title = `${state.service || "Logs"} · Vefa Çağlar`;
   renderServices();
 }
 
@@ -115,9 +115,9 @@ function renderServices() {
     );
     button.dataset.service = name;
     button.setAttribute("aria-pressed", String(state.service === name));
-    button.title = name || "tüm servisler";
+    button.title = name || "Tüm servisler";
     button.append(
-      node("span", "", name || "tüm servisler"),
+      node("span", "", name || "Tüm servisler"),
       node(
         "span",
         "service-total",
@@ -156,7 +156,7 @@ function status() {
   if (state.busy)
     label = state.logs.length
       ? `${count} kayıt · yükleniyor…`
-      : "kayıtlar yükleniyor…";
+      : "Kayıtlar yükleniyor…";
   else if ($("#live").checked) {
     label +=
       state.offset > 100 || $("#logs details[open]")
@@ -169,13 +169,13 @@ function status() {
   $("#load-more").hidden = !state.hasMore;
   $("#load-more").disabled = state.busy;
   $("#load-more").textContent = state.busy
-    ? "yükleniyor…"
+    ? "Yükleniyor…"
     : state.failed
-      ? "tekrar dene ↓"
-      : "daha eski kayıtlar ↓";
+      ? "Tekrar dene ↓"
+      : "Daha eski kayıtlar ↓";
   $("#end-status").textContent =
     !state.busy && !state.hasMore && state.logs.length
-      ? "bu aralıktaki tüm kayıtlar gösteriliyor"
+      ? "Bu aralıktaki tüm kayıtlar gösteriliyor"
       : "";
 }
 
@@ -183,9 +183,9 @@ async function copy(text, button) {
   const original = button.textContent;
   try {
     await navigator.clipboard.writeText(text);
-    button.textContent = "kopyalandı";
+    button.textContent = "Kopyalandı";
   } catch {
-    button.textContent = "kopyalanamadı";
+    button.textContent = "Kopyalanamadı";
   }
   setTimeout(() => {
     button.textContent = original;
@@ -236,9 +236,9 @@ function renderLog(log) {
       created = true;
       const panel = node("div", "log-details");
       const tools = node("div", "detail-tools");
-      const copyMessage = node("button", "text-button", "mesajı kopyala ↗");
+      const copyMessage = node("button", "text-button", "Mesajı kopyala ↗");
       copyMessage.addEventListener("click", () => copy(message, copyMessage));
-      const copyJSON = node("button", "text-button", "json kopyala ↗");
+      const copyJSON = node("button", "text-button", "JSON kopyala ↗");
       copyJSON.addEventListener("click", () =>
         copy(JSON.stringify(log, null, 2), copyJSON),
       );
