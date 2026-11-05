@@ -29,12 +29,16 @@ jobs:
           python3 -m unittest discover -s tests -p 'test_*.py'
       - name: Verify real Docker log ingestion
         run: ./scripts/start.sh
+      - name: Verify browser authentication and read-only routes
+        env:
+          RUN_BROWSER_TEST: '1'
+        run: python3 -m unittest discover -s tests -p 'test_browser.py' -v
       - name: Show service diagnostics
         if: failure()
         run: docker compose logs --tail=60
       - name: Clean up test services
         if: always()
-        run: docker compose down --volumes
+        run: docker compose down --volumes --remove-orphans
 
   deploy:
     needs: verify
@@ -55,4 +59,6 @@ jobs:
           VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
           VPS_DEPLOY_DIR: ${{ vars.VPS_DEPLOY_DIR || '/opt/logs-on-vps' }}
           DEPLOY_ID: ${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          LOGS_UI_USERNAME: ${{ secrets.LOGS_UI_USERNAME }}
+          LOGS_UI_PASSWORD: ${{ secrets.LOGS_UI_PASSWORD }}
         run: bash scripts/ssh-deploy.sh

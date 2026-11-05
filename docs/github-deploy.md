@@ -1,6 +1,6 @@
 # GitHub Actions ile VPS kurulumu
 
-Bu rehber `.github/workflows/logs.yml` ile birebir eşleşir. GitHub repo/environment/DNS ayarlarını ve VPS hazırlığını sen yaparsın. Workflow dosyaları projede hazırdır; henüz commit, push veya sunucu deployment'ı yapılmadı.
+Bu rehber `.github/workflows/logs.yml` ile birebir eşleşir. GitHub repo/environment/DNS ayarlarını ve VPS hazırlığını sen yaparsın. Tarayıcıdan şifreli HTTPS erişimi için [browser kurulumu](browser-access.md) bölümünü de uygula.
 
 ## GitHub repo ve Environment
 
@@ -21,6 +21,8 @@ Private repo'da Environment kullanımı GitHub planına bağlıdır. Menü gör�
 | `VPS_SSH_KEY` | Bu sunucuya erişebilen, parolasız SSH private key'in **tam içeriği**. Başlangıç/bitiş satırları dahil. `.pub` dosyası değil. |
 | `VPS_KNOWN_HOSTS` | Doğrulanmış SSH host key satırı/satırları. Aşağıdaki adımlarla hazırlanır; yalnız fingerprint yazılmaz. |
 | `VPS_PORT` | İsteğe bağlı SSH portu. Eklenmezse `22`. |
+| `LOGS_UI_USERNAME` | İsteğe bağlı browser kullanıcı adı. Örneğin `vefa`; `LOGS_UI_PASSWORD` ile birlikte girilir. |
+| `LOGS_UI_PASSWORD` | İsteğe bağlı browser şifresi. 12–72 UTF-8 byte, satır sonu veya başta/sonda boşluk yok. Workflow hash'leyip VPS'e gönderir. |
 
 SSH parola ile giriş bu workflow'da desteklenmez. Repo, registry PAT'i, GHCR login'i, `AUTH_ENV`, API/DB/Typesense secret'ları gerekmez; resmi public image'lar çekilir. `GITHUB_TOKEN` GitHub tarafından sağlanır, elle eklenmez.
 
@@ -90,7 +92,7 @@ Bu değişken **repository** seviyesinde olmalı; deploy job'unun başlaması En
 
 ## VPS hazırlığı ve runtime ayarları
 
-VPS'te Docker Engine, Compose v2+, Bash, `tar`, `curl` ve `flock` gerekir. Mevcut Docker daemon'ı kullanılmalı; ayrıca Docker kurulumu yapma. GitHub runner'ının SSH portuna bağlanabilmesi gerekir. SSH kullanıcısı Docker komutlarını etkileşimsiz, `sudo` istemeden çalıştırabilmeli.
+VPS'te Docker Engine, Compose v2.30+, Bash, `tar`, `curl` ve `flock` gerekir. Mevcut Docker daemon'ı kullanılmalı; ayrıca Docker kurulumu yapma. GitHub runner'ının SSH portuna bağlanabilmesi gerekir. SSH kullanıcısı Docker komutlarını etkileşimsiz, `sudo` istemeden çalıştırabilmeli.
 
 Sunucuda kontrol et:
 
@@ -127,6 +129,8 @@ Secret'ları ve Environment'ı hazırladıktan sonra repository variable `LOGS_D
 PR'larda yalnız kontrol ve geçici Docker log testi çalışır. `main` push'ları ve `main` üzerinde manuel çalıştırmalar, kontroller geçince `logs-production` üzerinden deploy eder. Başka dalda manuel çalıştırma deploy etmez. Varsa Environment onayını GitHub'da sen verirsin.
 
 Her deploy dosyaları `releases/<commit>-<run>-<attempt>/` altına yükler. Kalıcı `.env` ortak kalır. Sağlık ve gerçek Docker log testi geçince `current` symlink'i yeni release'e alınır. Docker volume adları sabittir; release dizini değiştiğinde log verisi korunur. Mevcut Caddy, DNS ve uygulama servisleri değiştirilmez. Bu akışı kullanırken aynı Compose projesine paralel olarak eski rsync dizininden deploy yapma.
+
+Browser secret'ları varsa bundle'a yalnız hash içeren `browser.env` ve browser servisini ekleyen `compose.override.yml` de girer. Şifreli dış erişim için mevcut Caddy'deki bir defalık domain route'u ve DNS adımı [ayrı rehberdedir](browser-access.md).
 
 ## Hata ve geri dönüş
 

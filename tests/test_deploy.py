@@ -79,7 +79,8 @@ class TransportTests(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.base = Path(self.temp.name)
         self.repo = self.base / "repo"
-        shutil.copytree(ROOT, self.repo, ignore=shutil.ignore_patterns(".git", "__pycache__", ".env"))
+        shutil.copytree(ROOT, self.repo, ignore=shutil.ignore_patterns(
+            ".git", "__pycache__", ".env", "browser.env", "compose.override.yml"))
         (self.repo / ".env").write_text("DO_NOT_UPLOAD=private\n")
         (self.repo / "unrelated-private.txt").write_text("private\n")
         self.bin = self.base / "bin"
@@ -102,6 +103,7 @@ if 'activate.sh' in args[-1]:
                         VPS_HOST="vps.example.test", VPS_USER="root", VPS_PORT="22",
                         VPS_SSH_KEY="test-private-key", VPS_KNOWN_HOSTS="test-host-key",
                         VPS_DEPLOY_DIR="/opt/logs-on-vps", DEPLOY_ID=DEPLOY_ID,
+                        LOGS_UI_USERNAME="", LOGS_UI_PASSWORD="",
                         SSH_CALLS=str(self.base / "calls"), BUNDLE_COPY=str(self.base / "bundle.tar.gz"))
 
     def deploy(self):
@@ -133,6 +135,28 @@ if 'activate.sh' in args[-1]:
     def test_remote_failure_is_not_reported_as_success(self):
         self.env["ACTIVATE_STATUS"] = "17"
         self.assertEqual(self.deploy().returncode, 17)
+
+    def test_browser_bundle_contains_hash_and_never_plaintext_password(self):
+        password = "not-saved-anywhere-599"
+        self.env.update(LOGS_UI_USERNAME="vefa", LOGS_UI_PASSWORD=password)
+        fake_docker = self.bin / "docker"
+        fake_docker.write_text("""#!/usr/bin/env python3
+import os, sys
+assert 'LOGS_UI_PASSWORD' not in os.environ
+assert sys.stdin.read() == 'not-saved-anywhere-599\\n'
+assert 'not-saved-anywhere-599' not in ' '.join(sys.argv)
+print('$2a$14$' + 'A' * 53)
+""")
+        fake_docker.chmod(0o755)
+        result = self.deploy()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertNotIn(password, result.stdout + result.stderr)
+        with tarfile.open(self.base / "bundle.tar.gz") as bundle:
+            self.assertIn("compose.override.yml", bundle.getnames())
+            self.assertEqual(bundle.getmember("browser.env").mode & 0o777, 0o600)
+            for member in bundle.getmembers():
+                if member.isfile():
+                    self.assertNotIn(password.encode(), bundle.extractfile(member).read(), member.name)
 
 
 if __name__ == "__main__":

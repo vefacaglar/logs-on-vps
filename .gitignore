@@ -4,3 +4,5 @@
 .DS_Store
 *.tar.gz
 __pycache__/
+browser.env
+compose.override.yml

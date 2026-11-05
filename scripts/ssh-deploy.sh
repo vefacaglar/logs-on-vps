@@ -37,8 +37,17 @@ ssh_options=(
 target="$VPS_USER@$VPS_HOST"
 release="$VPS_DEPLOY_DIR/releases/$DEPLOY_ID"
 
-# Explicit allowlist: .env, repository credentials and local files never travel.
-tar -czf "$work_dir/bundle.tar.gz" compose.yml .env.example vector scripts README.md docs
+python3 scripts/prepare-browser.py "$work_dir"
+unset LOGS_UI_PASSWORD LOGS_UI_USERNAME
+
+# Explicit allowlist: .env, SSH keys and local files never travel.
+bundle_paths=(compose.yml .env.example vector scripts README.md docs deploy)
+if [[ -f "$work_dir/browser.env" ]]; then
+  tar -czf "$work_dir/bundle.tar.gz" "${bundle_paths[@]}" \
+    -C "$work_dir" browser.env compose.override.yml
+else
+  tar -czf "$work_dir/bundle.tar.gz" "${bundle_paths[@]}"
+fi
 # Paths are expanded locally; every interpolated value is allowlisted above.
 # shellcheck disable=SC2029
 ssh "${ssh_options[@]}" "$target" "umask 077; mkdir -p '$release'"

@@ -25,13 +25,15 @@ Script sabit sürümlü image'ları çeker, Vector ayarlarını ve JSON dönüş
 
 ## Arayüz
 
+Sunucuya bağlanmadan `https://logs.vefacaglar.com` üzerinden kullanıcı adı ve şifreyle erişim için [GitHub secrets ve HTTPS kurulumunu](docs/browser-access.md) uygula.
+
 Mac'te ayrı terminalde tüneli açık tut:
 
 ```sh
 ssh -N -L 9428:127.0.0.1:9428 VPS_SSH
 ```
 
-[VictoriaLogs arayüzünü aç](http://localhost:9428/select/vmui/). `LOG_HTTP_PORT` değişirse tünelin sağ tarafındaki portu da değiştir. VictoriaLogs yalnızca VPS'in `127.0.0.1` adresine yayınlanır. Mevcut Caddy'ye değişiklik yapılmaz; HTTPS domain erişimi sonradan kimlik doğrulamasıyla eklenebilir.
+[VictoriaLogs arayüzünü aç](http://localhost:9428/select/vmui/). `LOG_HTTP_PORT` değişirse tünelin sağ tarafındaki portu da değiştir. VictoriaLogs yalnızca VPS'in `127.0.0.1` adresine yayınlanır. Tünel, domain erişiminin alternatifidir.
 
 ## Uygulamalar
 
