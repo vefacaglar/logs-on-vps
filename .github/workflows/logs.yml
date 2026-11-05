@@ -1,0 +1,58 @@
+name: Logs CI and deploy
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: logs-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Check deployment scripts
+        run: |
+          sh -n scripts/start.sh scripts/smoke-test.sh
+          bash -n scripts/ssh-deploy.sh scripts/activate.sh
+          shellcheck scripts/*.sh
+          python3 -m unittest discover -s tests -p 'test_*.py'
+      - name: Verify real Docker log ingestion
+        run: ./scripts/start.sh
+      - name: Show service diagnostics
+        if: failure()
+        run: docker compose logs --tail=60
+      - name: Clean up test services
+        if: always()
+        run: docker compose down --volumes
+
+  deploy:
+    needs: verify
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && vars.LOGS_DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: logs-production
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Upload verified configuration and deploy
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PORT: ${{ secrets.VPS_PORT || '22' }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+          VPS_DEPLOY_DIR: ${{ vars.VPS_DEPLOY_DIR || '/opt/logs-on-vps' }}
+          DEPLOY_ID: ${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+        run: bash scripts/ssh-deploy.sh

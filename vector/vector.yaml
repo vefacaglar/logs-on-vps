@@ -1,0 +1,113 @@
+data_dir: /var/lib/vector
+
+sources:
+  docker:
+    type: docker_logs
+    docker_host: unix:///var/run/docker.sock
+    # Prefix matches. Do not ingest the collector or database's own logs.
+    exclude_containers:
+      - logs-on-vps-vector-
+      - logs-on-vps-victorialogs-
+
+transforms:
+  normalize:
+    type: remap
+    inputs: [docker]
+    source: |
+      .host = "${VPS_LOG_HOST:-vps}"
+      .compose_project = string(.label."com.docker.compose.project") ?? "standalone"
+      .compose_service = string(.label."com.docker.compose.service") ?? string(.container_name) ?? "unknown"
+      del(.label)
+
+      # Keep application data nested so it cannot overwrite Docker metadata.
+      parsed, err = parse_json(.message)
+      if err == null && is_object(parsed) {
+        .app = parsed
+        .raw_message = .message
+        .message = string(.app.msg) ?? string(.app.message) ?? .message
+        level = to_string(.app.level) ?? ""
+        .level = downcase(level)
+        if level == "10" { .level = "trace" }
+        if level == "20" { .level = "debug" }
+        if level == "30" { .level = "info" }
+        if level == "40" { .level = "warn" }
+        if level == "50" { .level = "error" }
+        if level == "60" { .level = "fatal" }
+        if .level == "warning" { .level = "warn" }
+      }
+
+sinks:
+  victorialogs:
+    type: http
+    inputs: [normalize]
+    uri: http://victorialogs:9428/insert/jsonline?_stream_fields=host,compose_project,compose_service,container_name&_msg_field=message&_time_field=timestamp
+    compression: gzip
+    encoding:
+      codec: json
+    framing:
+      method: newline_delimited
+    request:
+      headers:
+        Content-Type: application/stream+json
+    healthcheck:
+      enabled: false
+    batch:
+      timeout_secs: 1
+    buffer:
+      type: disk
+      max_size: 536870912
+      when_full: block
+
+tests:
+  - name: pino JSON preserves trusted metadata and error details
+    inputs:
+      - insert_at: normalize
+        type: log
+        log_fields:
+          message: '{"msg":"request failed","level":50,"host":"untrusted","container_name":"untrusted","err":{"message":"database unavailable"}}'
+          container_name: api-blue
+          label:
+            com.docker.compose.project: vefacaglar-api-blue
+            com.docker.compose.service: api
+    outputs:
+      - extract_from: normalize
+        conditions:
+          - type: vrl
+            source: |
+              assert_eq!(.message, "request failed")
+              assert_eq!(.level, "error")
+              assert_eq!(.container_name, "api-blue")
+              assert_eq!(.compose_service, "api")
+              assert_eq!(.compose_project, "vefacaglar-api-blue")
+              assert_eq!(.app.err.message, "database unavailable")
+              assert!(.host != "untrusted")
+  - name: plain text remains searchable
+    inputs:
+      - insert_at: normalize
+        type: log
+        log_fields:
+          message: "plain text traceback"
+          container_name: standalone-app
+    outputs:
+      - extract_from: normalize
+        conditions:
+          - type: vrl
+            source: |
+              assert_eq!(.message, "plain text traceback")
+              assert_eq!(.compose_service, "standalone-app")
+              assert_eq!(.compose_project, "standalone")
+  - name: slog JSON uses readable severity
+    inputs:
+      - insert_at: normalize
+        type: log
+        log_fields:
+          message: '{"msg":"login denied","level":"WARN","request_id":"req-42"}'
+          container_name: authserver
+    outputs:
+      - extract_from: normalize
+        conditions:
+          - type: vrl
+            source: |
+              assert_eq!(.message, "login denied")
+              assert_eq!(.level, "warn")
+              assert_eq!(.app.request_id, "req-42")

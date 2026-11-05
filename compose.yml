@@ -1,0 +1,53 @@
+name: logs-on-vps
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  victorialogs:
+    image: victoriametrics/victoria-logs:v1.53.0
+    restart: unless-stopped
+    command:
+      - -storageDataPath=/victoria-logs-data
+      - -retentionPeriod=${LOG_RETENTION:-14d}
+      - -retention.maxDiskSpaceUsageBytes=${LOG_DISK_BUDGET:-10GiB}
+      - -memory.allowedPercent=60
+    ports:
+      - "127.0.0.1:${LOG_HTTP_PORT:-9428}:9428"
+    volumes:
+      - logs-data:/victoria-logs-data
+    mem_limit: ${LOG_MEMORY_LIMIT:-768m}
+    cpus: ${LOG_CPU_LIMIT:-1.0}
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    stop_grace_period: 60s
+    logging: *logging
+
+  vector:
+    image: timberio/vector:0.61.0-alpine
+    restart: unless-stopped
+    command: [--config, /etc/vector/vector.yaml]
+    environment:
+      VPS_LOG_HOST: ${VPS_LOG_HOST:-vps}
+      VECTOR_LOG: info
+    volumes:
+      - ./vector:/etc/vector:ro
+      - ${DOCKER_SOCKET_PATH:-/var/run/docker.sock}:/var/run/docker.sock:ro
+      - vector-data:/var/lib/vector
+    depends_on:
+      - victorialogs
+    mem_limit: ${VECTOR_MEMORY_LIMIT:-256m}
+    cpus: ${VECTOR_CPU_LIMIT:-0.5}
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    stop_grace_period: 60s
+    logging: *logging
+
+volumes:
+  logs-data:
+  vector-data:
