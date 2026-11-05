@@ -1,13 +1,13 @@
 # Copied to compose.override.yml by the deployment bundle when UI secrets exist.
 services:
   browser:
-    image: caddy:2-alpine@sha256:f6228111e5fafa1a5238258d0858e103f10599b8d1659a146e7726681a002bb9
+    build:
+      context: ./browser
+    image: logs-on-vps-browser:local
     restart: unless-stopped
     env_file:
       - path: ./browser.env
         format: raw
-    volumes:
-      - ./deploy/browser.Caddyfile:/etc/caddy/Caddyfile:ro
     networks:
       default:
       proxy:
@@ -17,9 +17,6 @@ services:
     mem_limit: 128m
     cpus: 0.5
     read_only: true
-    tmpfs:
-      - /config:size=8m
-      - /data:size=8m
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
     logging:

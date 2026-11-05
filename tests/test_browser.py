@@ -1,4 +1,3 @@
-import base64
 import json
 import os
 from pathlib import Path
@@ -37,22 +36,26 @@ class BrowserIntegrationTests(unittest.TestCase):
         override = Path(cls.directory.name) / "compose.override.yml"
         # Test-only loopback port; production publishes no browser container port.
         config = override.read_text().replace(
-            "    restart: unless-stopped", "    ports: ['127.0.0.1::8080']\n    restart: unless-stopped"
+            "    restart: unless-stopped", "    ports: ['127.0.0.1::8080']\n    environment:\n      LOGS_INSECURE_COOKIE: '1'\n    restart: unless-stopped"
         ).replace("path: ./browser.env", "path: " + json.dumps(str(Path(cls.directory.name) / "browser.env")))
         override.write_text(config)
         cls.command(["docker", "network", "create", cls.network])
-        cls.command(cls.compose + ["up", "-d", "browser"])
+        cls.command(cls.compose + ["up", "--build", "-d", "browser"])
         cls.url = "http://" + cls.command(cls.compose + ["port", "browser", "8080"]).strip()
         cls.opener = urllib.request.build_opener(NoRedirect())
         for _ in range(30):
             try:
-                if cls.request("/select/vmui/")[0] == 401:
+                if cls.request("/api/session")[0] == 401:
                     break
             except OSError:
                 pass
             time.sleep(1)
         else:
             raise RuntimeError("Browser authentication did not become ready")
+        status, headers, _ = cls.login(cls.password)
+        if status != 200:
+            raise RuntimeError("Session login failed")
+        cls.cookie = headers["Set-Cookie"].split(";", 1)[0]
 
     @classmethod
     def command(cls, arguments):
@@ -67,11 +70,15 @@ class BrowserIntegrationTests(unittest.TestCase):
         cls.directory.cleanup()
 
     @classmethod
-    def request(cls, path, password=None, data=None):
-        headers = {}
-        if password is not None:
-            token = base64.b64encode(("vefa:" + password).encode()).decode()
-            headers["Authorization"] = "Basic " + token
+    def request(cls, path, authenticated=False, data=None, json_body=None):
+        headers = {"Origin": cls.url, "X-Requested-With": "logs-ui"}
+        if authenticated:
+            headers["Cookie"] = cls.cookie
+        if json_body is not None:
+            data = json.dumps(json_body).encode()
+            headers["Content-Type"] = "application/json"
+        elif data is not None:
+            headers["Content-Type"] = "application/x-www-form-urlencoded"
         request = urllib.request.Request(cls.url + path, headers=headers, data=data)
         try:
             with cls.opener.open(request, timeout=15) as response:
@@ -82,23 +89,36 @@ class BrowserIntegrationTests(unittest.TestCase):
             finally:
                 error.close()
 
+    @classmethod
+    def login(cls, password):
+        return cls.request("/api/login", json_body={"username": "vefa", "password": password})
+
     def test_anonymous_and_invalid_credentials_are_denied(self):
-        self.assertEqual(self.request("/")[0], 401)
-        self.assertEqual(self.request("/select/vmui/")[0], 401)
-        self.assertEqual(self.request("/select/vmui/", password="wrong")[0], 401)
+        self.assertEqual(self.request("/")[0], 303)
+        self.assertEqual(self.request("/select/vmui/")[0], 303)
+        self.assertEqual(self.request("/api/session")[0], 401)
+        self.assertEqual(self.login("wrong")[0], 401)
+        self.assertEqual(self.request("/login")[0], 200)
 
     def test_authenticated_ui_and_post_query_work(self):
-        status, headers, _ = self.request("/", password=self.password)
-        self.assertEqual(status, 302)
-        self.assertEqual(headers["Location"], "/select/vmui/")
-        self.assertEqual(self.request("/select/vmui/", password=self.password)[0], 200)
+        status, _, content = self.request("/", authenticated=True)
+        self.assertEqual(status, 200)
+        self.assertIn(b"/static/app.js", content)
+        self.assertEqual(self.request("/select/vmui/", authenticated=True)[0], 200)
         data = urllib.parse.urlencode({"query": "_time:1m", "limit": "1"}).encode()
-        self.assertEqual(self.request("/select/logsql/query", password=self.password, data=data)[0], 200)
+        self.assertEqual(self.request("/select/logsql/query", authenticated=True, data=data)[0], 200)
+        end = time.time()
+        status, _, body = self.request("/api/logs", authenticated=True, json_body={
+            "query": "*", "start": time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime(end - 3600)),
+            "end": time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime(end)), "offset": 0,
+        })
+        self.assertEqual(status, 200, body)
+        self.assertIn("logs", json.loads(body))
 
     def test_ingestion_and_system_endpoints_are_not_published(self):
         for path in ["/insert/jsonline", "/delete/0", "/metrics", "/flags", "/debug/pprof/", "/health"]:
             with self.subTest(path=path):
-                self.assertEqual(self.request(path, password=self.password)[0], 404)
+                self.assertEqual(self.request(path, authenticated=True)[0], 404)
 
     def test_existing_caddy_is_configured_automatically_without_changing_other_sites(self):
         name = 'logs-main-caddy-' + uuid.uuid4().hex[:12]
@@ -142,13 +162,13 @@ class BrowserIntegrationTests(unittest.TestCase):
                 for _ in range(20):
                     try:
                         status = self.command(request + [url])
-                        if status == '401':
+                        if status == '303':
                             break
                     except subprocess.CalledProcessError:
                         pass
                     time.sleep(1)
                 else:
                     self.fail('Managed HTTPS route did not require authentication')
-                self.assertEqual(self.command(request + ['--user', 'vefa:' + self.password, url]), '200')
+                self.assertEqual(self.command(request + ['--cookie', self.cookie, url]), '200')
             finally:
                 subprocess.run(['docker', 'rm', '-f', name], capture_output=True)

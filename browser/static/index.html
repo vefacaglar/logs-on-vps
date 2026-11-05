@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <title>logs · vefa çağlar</title>
+    <link rel="icon" href="/static/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/static/app.css" />
+    <script type="module" src="/static/app.js"></script>
+  </head>
+  <body>
+    <header class="masthead console-masthead">
+      <nav aria-label="Konum">
+        <a href="https://vefacaglar.com">vefa çağlar</a
+        ><span class="separator">/</span><span>logs</span>
+      </nav>
+      <div class="account">
+        <span id="username"></span
+        ><button id="logout" class="text-button">çıkış ↗</button>
+      </div>
+    </header>
+    <div class="workspace">
+      <aside class="sidebar" aria-label="Servis filtresi">
+        <div class="sidebar-heading">
+          servisler <span id="service-count"></span>
+        </div>
+        <div id="services" class="services">
+          <button class="service active" data-service="" aria-pressed="true">
+            <span>tüm servisler</span><span class="service-total">—</span>
+          </button>
+        </div>
+        <p id="service-status" class="sidebar-note" role="status"></p>
+        <div class="sidebar-bottom">
+          <span class="eyebrow">araçlar</span
+          ><a href="/select/vmui/" target="_blank" rel="noopener"
+            >gelişmiş sorgu ↗</a
+          ><a
+            href="https://docs.victoriametrics.com/victorialogs/logsql/"
+            target="_blank"
+            rel="noopener noreferrer"
+            >LogsQL referansı ↗</a
+          >
+        </div>
+      </aside>
+      <main class="console">
+        <div class="page-heading">
+          <div>
+            <div class="eyebrow">sunucu / kayıtlar</div>
+            <h1 id="page-title">tüm loglar<span class="accent">.</span></h1>
+          </div>
+          <button id="refresh" class="ghost" title="Kayıtları yeniden getir">
+            yenile <span aria-hidden="true">↻</span>
+          </button>
+        </div>
+        <form id="query-form" class="query-form">
+          <label class="sr-only" for="query">LogsQL filtresi</label>
+          <div class="query-input">
+            <span aria-hidden="true">/</span
+            ><input
+              id="query"
+              name="query"
+              placeholder="loglarda ara veya level:error yaz…"
+              autocomplete="off"
+              spellcheck="false"
+              maxlength="4096"
+            /><kbd title="Aramaya odaklan">/</kbd>
+          </div>
+          <button type="submit" class="primary">
+            ara <span aria-hidden="true">↵</span>
+          </button>
+        </form>
+        <div class="filters">
+          <div class="level-filters" role="group" aria-label="Log seviyesi">
+            <button
+              data-level=""
+              class="level-filter active"
+              aria-pressed="true"
+            >
+              tümü</button
+            ><button
+              data-level="error"
+              class="level-filter"
+              aria-pressed="false"
+            >
+              hata</button
+            ><button
+              data-level="warn"
+              class="level-filter"
+              aria-pressed="false"
+            >
+              uyarı</button
+            ><button
+              data-level="info"
+              class="level-filter"
+              aria-pressed="false"
+            >
+              bilgi</button
+            ><button
+              data-level="debug"
+              class="level-filter"
+              aria-pressed="false"
+            >
+              debug
+            </button>
+          </div>
+          <div class="time-filters">
+            <label for="range" class="sr-only">Zaman aralığı</label
+            ><select id="range">
+              <option value="15m">son 15 dakika</option>
+              <option value="1h">son 1 saat</option>
+              <option value="6h">son 6 saat</option>
+              <option value="12h" selected>son 12 saat</option>
+              <option value="24h">son 24 saat</option>
+              <option value="7d">son 7 gün</option></select
+            ><label class="live-label"
+              ><input id="live" type="checkbox" />otomatik</label
+            >
+          </div>
+        </div>
+        <div class="result-meta">
+          <p id="result-status" role="status" aria-live="polite">
+            kayıtlar yükleniyor…
+          </p>
+          <button id="export" class="text-button" disabled>
+            jsonl indir ↓
+          </button>
+        </div>
+        <p id="query-error" class="error-message" role="alert" hidden></p>
+        <div class="log-table" aria-label="Log kayıtları" aria-busy="true">
+          <div class="log-columns" aria-hidden="true">
+            <span>zaman</span><span>seviye</span><span>servis</span
+            ><span>mesaj</span>
+          </div>
+          <div id="logs"></div>
+          <div id="empty" class="empty-state" hidden>
+            <span aria-hidden="true">[ ∅ ]</span>
+            <h2>kayıt bulunamadı</h2>
+            <p>Filtreyi değiştir veya zaman aralığını genişlet.</p>
+            <button id="clear-filters" class="ghost">filtreleri temizle</button>
+          </div>
+        </div>
+        <div id="load-sentinel" class="load-area">
+          <button id="load-more" class="ghost" hidden>
+            daha eski kayıtlar ↓
+          </button>
+          <p id="end-status" class="muted"></p>
+        </div>
+        <footer class="console-footer">
+          <span>en yeni → en eski</span><span id="snapshot-time"></span>
+        </footer>
+      </main>
+    </div>
+  </body>
+</html>

@@ -27,6 +27,8 @@ Script sabit sürümlü image'ları çeker, Vector ayarlarını ve JSON dönüş
 
 Sunucuya bağlanmadan `https://logs.vefacaglar.com` üzerinden kullanıcı adı ve şifreyle erişim için [GitHub secrets ve HTTPS kurulumunu](docs/browser-access.md) uygula.
 
+Domain özel log konsolunu açar: vefacaglar.com ile aynı siyah/monospace tasarım, sayfa içi giriş, servis/seviye/zaman filtreleri ve aşağı kaydırarak eski kayıtları yükleme. Gelişmiş LogsQL sorguları için konsoldaki `gelişmiş sorgu` bağlantısı VictoriaLogs arayüzünü açar. Mevcut kullanıcı adı ve şifre secret'ları geçerlidir; yeni servis ilk güncellemede VPS'te derlenir.
+
 Mac'te ayrı terminalde tüneli açık tut:
 
 ```sh

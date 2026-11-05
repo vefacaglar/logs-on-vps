@@ -41,7 +41,7 @@ python3 scripts/prepare-browser.py "$work_dir"
 unset LOGS_UI_PASSWORD LOGS_UI_USERNAME
 
 # Explicit allowlist: .env, SSH keys and local files never travel.
-bundle_paths=(compose.yml .env.example vector scripts README.md docs deploy)
+bundle_paths=(compose.yml .env.example vector scripts README.md docs deploy browser)
 if [[ -f "$work_dir/browser.env" ]]; then
   tar -czf "$work_dir/bundle.tar.gz" "${bundle_paths[@]}" \
     -C "$work_dir" browser.env compose.override.yml browser-settings.json

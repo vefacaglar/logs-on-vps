@@ -134,6 +134,8 @@ if 'activate.sh' in args[-1]:
             names = bundle.getnames()
         self.assertIn(".env.example", names)
         self.assertIn("scripts/activate.sh", names)
+        self.assertIn("browser/Dockerfile", names)
+        self.assertIn("browser/static/app.js", names)
         self.assertNotIn(".env", names)
         self.assertNotIn("unrelated-private.txt", names)
         calls = [json.loads(line) for line in (self.base / "calls").read_text().splitlines()]

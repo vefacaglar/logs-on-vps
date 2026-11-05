@@ -2,7 +2,7 @@
 
 Hedef adres `https://logs.vefacaglar.com`. Kurulum ve günlük kullanım için VPS'e elle bağlanman gerekmez. GitHub secret'larını ve DNS kaydını sen ayarlarsın; workflow mevcut Caddy route'unu otomatik ekleyip doğrular ve yeniden yükler.
 
-Akış: tarayıcı → mevcut Caddy (HTTPS) → `browser` servisi (kullanıcı adı/şifre) → VictoriaLogs. Browser servisi yalnız `/select/*` sorgu ve arayüz yollarını geçirir; `/insert`, `/delete`, `/metrics`, `/debug` gibi yollar yayınlanmaz. VictoriaLogs'un `9428` portu host üzerinde yalnız loopback'te kalır; browser servisinin host portu yoktur.
+Akış: tarayıcı → mevcut Caddy (HTTPS) → `browser` servisi (özel log konsolu ve oturum denetimi) → VictoriaLogs. Go servisi, gömülü HTML/CSS/JS arayüzünü sunar; Node veya frontend build sistemi gerekmez. Browser servisi oturum denetiminden sonra yalnız `/select/*` sorgu ve gelişmiş arayüz yollarını geçirir; `/insert`, `/delete`, `/metrics`, `/debug` gibi yollar yayınlanmaz. VictoriaLogs'un `9428` portu host üzerinde yalnız loopback'te kalır; browser servisinin host portu yoktur.
 
 ## GitHub secrets
 
@@ -45,10 +45,18 @@ Ana Caddy'de şifre tutulmaz; giriş denetimi browser servisindedir. Caddy `--wa
 
 ## Giriş ve şifre değişikliği
 
-[Log arayüzünü aç](https://logs.vefacaglar.com). Tarayıcı kullanıcı adı ve şifre isteyecek; GitHub'a girdiğin değerleri kullan. Doğru girişten sonra `/select/vmui/` arayüzüne yönlenirsin.
+[Log arayüzünü aç](https://logs.vefacaglar.com). `/login` sayfasında GitHub secret'larına girdiğin kullanıcı adı ve şifreyi kullan. Doğru girişten sonra `/` adresindeki özel log konsolu açılır. Tarayıcının Basic Auth penceresi artık kullanılmaz; mevcut secret'ları değiştirmek gerekmez.
 
-Şifreyi değiştirmek için `LOGS_UI_PASSWORD` secret'ını güncelle ve tekrar `Run workflow` çalıştır. Browser servisi yeni hash ile yeniden oluşturulur. Tarayıcı eski giriş bilgisini tutarsa gizli pencereyle dene. Eski release'e rollback eski hash'i de geri getirir.
+Konsol vefacaglar.com'un siyah, Fira Code ve keskin köşeli tasarımını kullanır. Font dosyası yerelden sunulur; üçüncü taraf font isteği yoktur. Servis ve seviye filtreleri, LogsQL filtre alanı, zaman aralıkları, satır içinde alan detayları, kopyalama ve yüklenmiş kayıtları JSONL olarak indirme bulunur. `gelişmiş sorgu` bağlantısı VictoriaLogs'un mevcut arayüzünü aynı oturumla açar; pipeline sorguları burada çalıştırılır.
 
-Kurulumdan sonra Mac'te `curl -I https://logs.vefacaglar.com/select/vmui/` isteği girişsiz `401` dönmeli. Şifreli girişte arayüz açılmalı; `/metrics` gibi yönetim yolları girişten sonra bile `404` kalmalı. CI bu davranışları gerçek Caddy ve VictoriaLogs container'larıyla HTTP üzerinde test eder. Gerçek DNS/HTTPS sertifikası sunucudaki route etkinleşince doğrulanır.
+Kayıtlar 100'er yüklenir. Aşağı kaydırmak veya `daha eski kayıtlar` düğmesine basmak sonraki sayfayı getirir. Başlangıç/bitiş zamanı sayfalar arasında sabit kalır; `yenile` yeni bir zaman aralığı açar. Eşit zaman damgaları stream ve mesaj ile sıralanır. Geç gelen geçmiş logların depoya eklenmesi veya retention silmeleri sırasında offset sayfalama gerçek bir veritabanı snapshot'ı değildir; tam aktarım garantisi vermez. Otomatik yenileme 5 saniyede bir çalışır; eski sayfalara geçildiğinde, bir log detayı açıkken veya sekme arka plandayken bekler. Sorgu başına 20 saniye ve geçmişte 1.000.000 offset sınırı vardır; çok geniş aralıkları daralt.
 
-Resmi kaynaklar: [Caddy basic_auth](https://caddyserver.com/docs/caddyfile/directives/basic_auth), [Caddy şifre hash'leme](https://caddyserver.com/docs/command-line#caddy-hash-password), [VictoriaLogs sorgu yetkisi](https://docs.victoriametrics.com/victorialogs/security-and-lb/#search-authorization).
+Oturum çerezi `Secure`, `HttpOnly`, `SameSite=Strict` ve `__Host-` öneki kullanır; 12 saat sonra sona erer. Oturumlar bellekte tutulur, servis yeniden başladığında yeniden giriş gerekir. Çıkış oturumu sunucuda iptal eder. Giriş denemeleri dakikada altı istekle ve tek eşzamanlı bcrypt doğrulamasıyla sınırlıdır. Giriş, çıkış ve özel API POST istekleri aynı Origin ve özel istek başlığı gerektirir. Kullanıcı adı/şifre ve loglar tarayıcı depolamasına yazılmaz.
+
+Şifreyi değiştirmek için `LOGS_UI_PASSWORD` secret'ını güncelle ve tekrar `Run workflow` çalıştır. Browser servisi yeni hash ile yeniden oluşturulur, eski oturumlar sona erer. Eski release'e rollback eski hash'i de geri getirir.
+
+Kurulumdan sonra Mac'te `curl -s -o /dev/null -w '%{http_code}\n' https://logs.vefacaglar.com/` isteği girişsiz `303` ile `/login` sayfasına yönlenmeli; `/api/session` ve sorgu API'leri girişsiz `401` dönmeli. Giriş sayfası `200` dönmeli; `/metrics` gibi yönetim yolları girişten sonra bile `404` kalmalı. CI oturum korumasını Go testleriyle, arayüz/proxy davranışlarını gerçek Caddy ve VictoriaLogs container'larıyla test eder. Gerçek DNS/HTTPS sertifikası sunucudaki route etkinleşince doğrulanır.
+
+Yerel geliştirme: `cd browser && go test -race ./...` çalıştır. `LOGS_UI_USERNAME` ve bcrypt `LOGS_UI_PASSWORD_HASH` ile `go run .` servisi başlatır. Yalnız HTTP yerel testleri için `LOGS_INSECURE_COOKIE=1` kullanılabilir; üretim Compose dosyası bu ayarı içermez. İsteğe bağlı `LOGS_LISTEN` ve `VICTORIALOGS_URL` yerel portları ayarlar. Docker varsa `RUN_BROWSER_TEST=1 python3 -m unittest discover -s tests -p 'test_browser.py' -v` gerçek container kontrolünü çalıştırır.
+
+Resmi kaynaklar: [Caddy şifre hash'leme](https://caddyserver.com/docs/command-line#caddy-hash-password), [VictoriaLogs sorgu API'si](https://docs.victoriametrics.com/victorialogs/querying/), [VictoriaLogs sorgu yetkisi](https://docs.victoriametrics.com/victorialogs/security-and-lb/#search-authorization).
